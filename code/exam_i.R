@@ -10,7 +10,7 @@ df_mtcars <- as_tibble(mtcars,
 # 1. Filter rows where number of cylinders (`cyl`) is 6
 # Write code to create a new data frame that only includes rows where `cyl == 6`.
 # Assign to: `mtcars_cyl6`
-
+filter(df_mtcars, cyl == 6)
 # 2. Filter rows where number of gears (`gear`) is either 3 or 5
 # Use `%in%` to filter the `df_mtcars` dataset for these two `gear` values.
 # Assign to: `mtcars_g35`
