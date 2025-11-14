@@ -37,11 +37,8 @@ sf_site <- df_site %>%
 # From `sf_nc_county`, select only the county polygons of the following counties: 
 #   "guilford", "randolph", "davidson", and "forsyth". 
 # Save the result as `sf_four`.
-(sf_four <- sf_nc_county %>% 
-    filter(county == "guilford",
-           county == "davidson",
-           county == "randolph",
-           county == "forsyth"))
+sf_four <- sf_nc_county %>% 
+    filter(sf_nc_county, County %in% c("guilford", "davidson", "randolph", "forsyth"))
 
 # Q3. 
 # Perform a spatial join to identify sites in `sf_site` that fall within 
@@ -49,7 +46,8 @@ sf_site <- df_site %>%
 # Make sure that the output object is a POINT layer after spatial join.
 # Remove any rows without a `county` value and save the result as `sf_site_four`.
 sf_site_four <- st_join(x = sf_site,
-                        y = sf_nc_county)
+                        y = sf_four)
+df %>% drop_na(county)
 print(sf_site_four)
 
 # Q4. 
@@ -65,9 +63,14 @@ ggplot() +
 #   with the appropriate CRS, UTM Zone 17N (EPSG: 32617) 
 #   so that distances are measured in meters. 
 # Then, find the maximum distance among all site pairs.
-(sf_str_proj <- st_transform(st_as_sf, crs = 32617))
+sf_str_proj <- sf_site_four %>% 
+  st_transform(crs = 32617)
 
-# ENTER YOUR ANSWER HERE:
+print(sf_str_proj)
+
+st_distance(sf_str_proj)
+
+# ENTER YOUR ANSWER HERE: 1000
 
 # raster data analysis ----------------------------------------------------
 
@@ -91,6 +94,12 @@ ggplot() +
 #name        : code 
 #min value   :    0 
 #max value   : 1100 
+unique(spr_land)
+#code
+#1    0
+#2 1001
+#3 1010
+#4 1100
 
 # Q7. 
 # Reclassify the raster `spr_land` to create a new raster object `spr_crop` 
@@ -101,7 +110,7 @@ ggplot() +
 #   1100 = 0 (urban)
 #   0 = 0 (other)
 (cm <- cbind(c(0, 1001, 1010, 1100),
-             c(0, 1, 0, 0)))
+             c(0, 0, 1, 0)))
 spr_crop <- classify(spr_land,
                     rcl = cm)
 
@@ -109,7 +118,9 @@ spr_crop <- classify(spr_land,
 # Crop the cropland raster (`spr_crop`) to the extent of the four selected counties 
 # (`sf_four`; "guilford", "randolph", "davidson", and "forsyth")
 # Save the resulting cropped raster as `spr_crop_four`.
-spr_crop_four <- crop(x = spr_prec,
+(spr_crop <- rast("data/spr_land_reclass.tif"))
+ext(spr_crop)
+spr_crop_four <- crop(x = spr_crop,
                       y = c(-84, -75, 34, 37))
 # Q9. 
 # Create a map showing the cropped cropland raster (`spr_crop_four`) 
@@ -125,7 +136,7 @@ ggplot() +
 # Since cropland pixels are coded as 1 and others as 0, the mean gives the proportion.
 values(spr_crop_four) %>%
 mean()
-# ENTER YOUR ANSWER HERE:811.306
+# ENTER YOUR ANSWER HERE:813.029
 # (round your answer to third decimal places, e.g., 0.021)
 
 # raster-vector interaction -----------------------------------------------
@@ -149,21 +160,23 @@ sf_site_proj <- sf_site %>%
   st_transform(crs = 32617)
 
 sf_site_buff <- sf_site_proj %>%
-  st_buffer(dist = 3)
+  st_buffer(dist = 3000)
 
 # Q13. Project the cropped cropland raster (`spr_crop_four`) 
 # to the same UTM coordinate reference system (EPSG: 32617). 
 # Use an appropriate re-sampling method in light of the raster data type.
-spr_crop_four 
+print(spr_crop_four)
+(spr_crop_four_proj <- project(x = spr_crop_four,
+                             y = "EPSG:32617"))
 
 # Q14. Create a map displaying the projected cropland raster (`spr_crop_proj`) 
 # with 3-km site buffers (`sf_buff_proj`) overlaid.
 ggplot() +
-  geom_sf(data = spr_crop_four,
-          fill = "grey") +
-  geom_sf(data = sf_site_buff,
-          fill = "salmon") +
-  geom_sf(data = sf_site) +
+  geom_spatraster(data = spr_crop_four,
+                  fill = "grey") +
+  geom_spatraster(data = sf_site_buff,
+                  fill = "salmon") +
+  geom_spatraster(data = sf_site) +
   theme_bw()
 
 # Q15. Calculate the proportion of cropland within each 3-km site buffer. 
